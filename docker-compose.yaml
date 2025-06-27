@@ -1,0 +1,86 @@
+services:
+  postgres:
+    profiles:
+      - off
+    image: postgres:17-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U myuser -d mydatabase" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ───────── CouchDB 3-node cluster ─────────
+  couch1:
+    image: couchdb:3.5.0
+    container_name: couch1
+    hostname: couch1
+    restart: unless-stopped
+    expose: [ "5984" ]
+    ports: [ "15984:5984" ]
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: Zq1!dXr5*Me9
+      NODENAME: couch1
+      ERL_FLAGS: "-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9100"
+      COUCHDB_SECRET: myclustersecret
+    volumes:
+      - couch1-data:/opt/couchdb/data
+
+  couch2:
+    image: couchdb:3.5.0
+    container_name: couch2
+    hostname: couch2
+    restart: unless-stopped
+    expose: [ "5984" ]
+    ports: [ "25984:5984" ]
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: Zq1!dXr5*Me9
+      NODENAME: couch2
+      ERL_FLAGS: "-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9100"
+      COUCHDB_SECRET: myclustersecret
+    volumes:
+      - couch2-data:/opt/couchdb/data
+
+  couch3:
+    image: couchdb:3.5.0
+    container_name: couch3
+    hostname: couch3
+    restart: unless-stopped
+    expose: [ "5984" ]
+    ports: [ "35984:5984" ]
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: Zq1!dXr5*Me9
+      NODENAME: couch3
+      ERL_FLAGS: "-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9100"
+      COUCHDB_SECRET: myclustersecret
+    volumes:
+      - couch3-data:/opt/couchdb/data
+
+  couch-init:
+    image: curlimages/curl:8.7.1
+    depends_on:
+      couch1: { condition: service_started }
+      couch2: { condition: service_started }
+      couch3: { condition: service_started }
+      reverse-proxy: { condition: service_started }
+    entrypoint: [ "/bin/sh", "/init-couch.sh" ]
+    volumes:
+      - ./init-couch.sh:/init-couch.sh:ro
+
+volumes:
+  postgres_data:
+  couch1-data:
+  couch2-data:
+  couch3-data:
