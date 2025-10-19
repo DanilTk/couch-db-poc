@@ -93,11 +93,6 @@ public class CustomerRepositoryCouchDb {
 		}
 	}
 
-	private HttpHeaders jsonHeaders() {
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		return headers;
-	}
 
 	public void waitForDatabaseToBeReady(String dbName) {
 		String dbUrl = couchDbProperties.getUrl() + "/" + dbName;      // http://…/customers_<hash>
