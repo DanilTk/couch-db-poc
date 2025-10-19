@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: load-customer-data
+      author: dan
+      dbms: postgresql
+      runOnChange: false
+      failOnError: true
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                IF NOT EXISTS (SELECT 1 FROM customers LIMIT 1) THEN
+                  RAISE NOTICE 'Running CSV import via COPY';
+                  COPY customers (
+                    idx, customer_id, first_name, last_name, company,
+                    city, country, phone1, phone2, email, subscription_date, website
+                  )
+                  FROM '/tmp/customers_dataset.csv'
+                  WITH (FORMAT csv, HEADER, DELIMITER ',', QUOTE '"');
+                ELSE
+                  RAISE NOTICE 'Skipping import, table is not empty.';
+                END IF;
+              END
+              $$;

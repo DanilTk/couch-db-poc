@@ -1,7 +1,5 @@
 services:
   postgres:
-    profiles:
-      - off
     image: postgres:17-alpine
     container_name: postgres
     restart: unless-stopped
@@ -13,58 +11,86 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init/customers_dataset.csv:/tmp/customers_dataset.csv:ro
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U myuser -d mydatabase" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ───────── CouchDB 3-node cluster ─────────
+  reverse-proxy:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "5984:5984"
+
+  # ──────────────────────────  CouchDB nodes  ─────────────────────────────
   couch1:
     image: couchdb:3.5.0
+    hostname: couch1.local                 # FQDN → long node-name works
     container_name: couch1
-    hostname: couch1
     restart: unless-stopped
+    ports: [ "15984:5984" ]                  # host-port → container
     expose: [ "5984" ]
-    ports: [ "15984:5984" ]
     environment:
-      COUCHDB_USER: admin
-      COUCHDB_PASSWORD: Zq1!dXr5*Me9
-      NODENAME: couch1
-      ERL_FLAGS: "-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9100"
-      COUCHDB_SECRET: myclustersecret
+      # ── CouchDB admin account (created on first start)
+      COUCHDB_USER: admin                    # admin user name
+      COUCHDB_PASSWORD: Zq1!dXr5*Me9             # admin password
+
+      # ── Erlang / clustering identity
+      NODENAME: couch1.local             # unique long node-name (must match FQDN)
+
+      # ── Connectivity & security tokens (identical on *all* nodes)
+      ERLANG_COOKIE: SAMECOUCHDBCLUSTER       # Erlang distribution cookie
+      COUCHDB_SECRET: SAMECOUCHDBCLUSTER       # shared secret required by /_cluster_setup
+
+      # ── Extra beam flags
+      #- setcookie SAMECOUCHDBCLUSTER            ensures beam uses the same cookie value
+      # -kernel inet_dist_listen_min 9100        limit Erlang distribution ports
+      # inet_dist_listen_max 9100                  (single port = easier firewalling)
+      ERL_FLAGS: >
+        -setcookie SAMECOUCHDBCLUSTER
+        -kernel inet_dist_listen_min 9100
+        inet_dist_listen_max 9100
     volumes:
       - couch1-data:/opt/couchdb/data
 
   couch2:
     image: couchdb:3.5.0
+    hostname: couch2.local
     container_name: couch2
-    hostname: couch2
     restart: unless-stopped
-    expose: [ "5984" ]
     ports: [ "25984:5984" ]
+    expose: [ "5984" ]
     environment:
       COUCHDB_USER: admin
       COUCHDB_PASSWORD: Zq1!dXr5*Me9
-      NODENAME: couch2
-      ERL_FLAGS: "-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9100"
-      COUCHDB_SECRET: myclustersecret
+      NODENAME: couch2.local
+      ERLANG_COOKIE: SAMECOUCHDBCLUSTER
+      COUCHDB_SECRET: SAMECOUCHDBCLUSTER
+      ERL_FLAGS: >
+        -setcookie SAMECOUCHDBCLUSTER
+        -kernel inet_dist_listen_min 9100 inet_dist_listen_max 9100
     volumes:
       - couch2-data:/opt/couchdb/data
 
   couch3:
     image: couchdb:3.5.0
+    hostname: couch3.local
     container_name: couch3
-    hostname: couch3
     restart: unless-stopped
-    expose: [ "5984" ]
     ports: [ "35984:5984" ]
+    expose: [ "5984" ]
     environment:
       COUCHDB_USER: admin
       COUCHDB_PASSWORD: Zq1!dXr5*Me9
-      NODENAME: couch3
-      ERL_FLAGS: "-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9100"
-      COUCHDB_SECRET: myclustersecret
+      NODENAME: couch3.local
+      ERLANG_COOKIE: SAMECOUCHDBCLUSTER
+      COUCHDB_SECRET: SAMECOUCHDBCLUSTER
+      ERL_FLAGS: >
+        -setcookie SAMECOUCHDBCLUSTER
+        -kernel inet_dist_listen_min 9100 inet_dist_listen_max 9100
     volumes:
       - couch3-data:/opt/couchdb/data
 

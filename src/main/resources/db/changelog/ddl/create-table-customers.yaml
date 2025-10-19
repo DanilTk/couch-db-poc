@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-customers-table
+      author: dan
+      changes:
+        - createTable:
+            tableName: customers
+            columns:
+              - column:
+                  name: customer_id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: idx
+                  type: int
+              - column:
+                  name: first_name
+                  type: varchar(100)
+              - column:
+                  name: last_name
+                  type: varchar(100)
+              - column:
+                  name: company
+                  type: varchar(255)
+              - column:
+                  name: city
+                  type: varchar(100)
+              - column:
+                  name: country
+                  type: varchar(100)
+              - column:
+                  name: phone1
+                  type: varchar(50)
+              - column:
+                  name: phone2
+                  type: varchar(50)
+              - column:
+                  name: email
+                  type: varchar(255)
+              - column:
+                  name: subscription_date
+                  type: date
+              - column:
+                  name: website
+                  type: varchar(255)

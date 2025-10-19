@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mydatabase
+    username: myuser
+    password: mypassword
+    driver-class-name: org.postgresql.Driver
+
+couchdb:
+  username: admin
+  password: Zq1!dXr5*Me9
+  protocol: http
+  host: localhost
+  port: 5984
+  url: http://localhost:5984
