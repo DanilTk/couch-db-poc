@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 @RequiredArgsConstructor
 public class DbSyncHandler {
-	private static final String DB_SYNC_MARKER = "sync-check";
+	private static final String DB_SYNC_MARKER = "sql_to_couchdb_sync_marker";
 	private static final int PAGE_SIZE = 2500;
 
 	private final CustomerRepositoryCouchDb customerRepositoryCouchDb;

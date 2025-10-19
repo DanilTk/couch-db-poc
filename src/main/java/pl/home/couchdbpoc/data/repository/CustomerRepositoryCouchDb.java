@@ -18,9 +18,9 @@ import pl.home.couchdbpoc.data.SyncStatusDocument;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -32,10 +32,6 @@ public class CustomerRepositoryCouchDb {
 	private final RestTemplate restTemplate;
 	private final CouchDbClient couchDbClient;
 
-	public void saveAll(List<CustomerDocument> collection) {
-		couchDbClient.bulk(collection, true);
-	}
-
 	public boolean existsByMarkerId(String id) {
 		try {
 			couchDbClient.find(SyncStatusDocument.class, id);
@@ -45,8 +41,27 @@ public class CustomerRepositoryCouchDb {
 		}
 	}
 
+	public void saveAll(List<CustomerDocument> collection) {
+		couchDbClient.bulk(collection, true);
+	}
+
+	public void save(CustomerDocument customerDocument) {
+		couchDbClient.save(customerDocument);
+	}
+
 	public void save(SyncStatusDocument syncStatusDocument) {
 		couchDbClient.save(syncStatusDocument);
+	}
+
+	public void update(CustomerDocument customerDocument) {
+		Optional<CustomerDocument> existingDocument = findById(customerDocument.getId());
+		if (existingDocument.isPresent()) {
+			String rev = existingDocument.get().getRev();
+			customerDocument.setRev(rev);
+			couchDbClient.update(customerDocument);
+		} else {
+			save(customerDocument);
+		}
 	}
 
 	public void prepareReplica(String country) {
@@ -91,49 +106,6 @@ public class CustomerRepositoryCouchDb {
 				throw e;
 			}
 		}
-	}
-
-
-	public void waitForDatabaseToBeReady(String dbName) {
-		String dbUrl = couchDbProperties.getUrl() + "/" + dbName;      // http://…/customers_<hash>
-
-		for (int i = 0; i < 50; i++) {        // максимум ~5 сек (50 × 100 мс)
-			try {
-				restTemplate.headForHeaders(dbUrl); // HEAD быстрее, чем GET
-				return;                             // 200 → база готова
-			} catch (HttpClientErrorException.NotFound ex) {
-				// ещё не создана
-			}
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				return;
-			}
-		}
-		throw new IllegalStateException("Timeout: database " + dbName + " was not created.");
-	}
-
-	public String replicateCountry(String countryName) {
-		String targetDb = "customers_" + hash8(countryName);          // customers_5dbddf91
-
-		Map<String, Object> body = new LinkedHashMap<>();
-		body.put("source", couchDbProperties.getUrl() + "/customers"); // http://…/customers
-		body.put("target", couchDbProperties.getUrl() + "/" + targetDb);
-		body.put("selector", Map.of("country", countryName));          // только selector
-		body.put("create_target", true);
-		body.put("continuous", true);                                  // live-репликация
-
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-
-		restTemplate.postForEntity(
-			couchDbProperties.getUrl() + "/_replicate",
-			new HttpEntity<>(body, headers),
-			String.class);
-
-		log.info("✅ Replicated '{}' → {}", countryName, targetDb);
-		return targetDb;                                               // <- вернули имя БД
 	}
 
 	private String hash8(String input) {
@@ -182,5 +154,20 @@ public class CustomerRepositoryCouchDb {
 		);
 		restTemplate.put(securityUrl, secDoc);
 		log.info("🔐 Applied _security to {}", dbName);
+	}
+
+	public void deleteById(String id) {
+		CustomerDocument document = couchDbClient.find(CustomerDocument.class, id);
+		couchDbClient.remove(document);
+	}
+
+	public Optional<CustomerDocument> findById(String id) {
+		try {
+			CustomerDocument document = couchDbClient.find(CustomerDocument.class, id);
+			return Optional.ofNullable(document);
+		} catch (NoDocumentException e) {
+			return Optional.empty();
+		}
+
 	}
 }

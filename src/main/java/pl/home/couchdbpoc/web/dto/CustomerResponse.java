@@ -12,7 +12,6 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class CustomerResponse {
-
 	private String id;
 	private Integer index;
 	private String firstName;
