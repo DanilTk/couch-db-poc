@@ -12,10 +12,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pl.home.couchdbpoc.data.Country;
 import pl.home.couchdbpoc.web.dto.CustomerRequest;
 import pl.home.couchdbpoc.web.dto.CustomerResponse;
 import pl.home.couchdbpoc.web.service.CustomerService;
@@ -52,9 +50,7 @@ public class CustomerController {
 
 	@GetMapping("/{id}")
 	@Operation(summary = "Get a customer by ID")
-	public ResponseEntity<CustomerResponse> getCustomerById(
-		@PathVariable String id,
-		@RequestHeader("X-Country") Country country) {
+	public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable String id) {
 		CustomerResponse response = customerService.getCustomerById(id);
 		return ResponseEntity.ok(response);
 	}
